@@ -2,6 +2,12 @@
 # -*- coding: utf-8 -*-
 #
 #  SAMPLE PLUG-IN USED AS REFERENCE/TEMPLATE: test-file-plug-ins.py 2021-2024 Jacob Boerema
+#
+# Tested and working on version 2.99.19 - commit fe6e1d7
+#
+# Script path:
+# ~/.config/GIMP/2.99/plug-ins/group_selected_layers/group_selected_layers.py
+
 
 import sys
 
@@ -62,12 +68,38 @@ class GroupSelectedLayers (Gimp.PlugIn):
        #    (is needed since inserting a new layer replaces the current selection with just the newly inserted layer)
        #  
        selected_layers = image.get_selected_layers()
+       parents = []
+
+       for layer in selected_layers:
+           parent = layer.get_parent()
+           if parent not in parents:
+               parents.append(parent)
+
+       # if same parents
+       #     if all selected layers are under the same parent layer, nest the new group layer inside of it
+       if len(parents) == 1:                
+           new_group_parent = parents[0]
+           topmost_position = min([image.get_item_position(layer) for layer in selected_layers])
+
+       # if different parents
+       #     if selected layers are nested under different parent layers, insert group layer in the main stack, unnested
+       elif len(parents) > 1:              
+           new_group_parent = None
+           topmost_position = 0
+
+       # if no parents found (should not happen)
+       #     use main stack as default here to try and not break anything. should not be able to reach this point ever though.
+       else:
+           new_group_parent = None
+           topmost_position = 0
+           print("ERROR: could not get any parents from selected layers")
+
 
        # => insert new group into image
        image.insert_layer(
-               new_group, # group to insert
-               None,      # parent nest group inside of. None = unnested
-               0          # index/stack-postition within parent (0 = insert as topmost layer within parent)
+               new_group,           # group to insert
+               new_group_parent,    # parent nest group inside of. None = unnested
+               topmost_position     # index/stack-postition within parent (0 = insert as topmost layer within parent)
        )
 
        for selected_layer in selected_layers:
