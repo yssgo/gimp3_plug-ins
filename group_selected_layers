@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+#  SAMPLE PLUG-IN USED AS REFERENCE/TEMPLATE: test-file-plug-ins.py 2021-2024 Jacob Boerema
+
+import sys
+
+import gi
+gi.require_version('Gimp', '3.0')
+from gi.repository import Gimp
+
+from gi.repository import GLib
+
+VERSION = "0.2"
+AUTHORS = "newinput"
+COPYRIGHT = "newinput"
+YEARS   = "2023-2024"
+
+class GroupSelectedLayers (Gimp.PlugIn):
+
+   def __init__(self):
+       Gimp.PlugIn.__init__(self)
+       self.test_cfg = None
+       self.log = None
+
+   ## GimpPlugIn virtual methods ##
+   def do_set_i18n(self, _name):
+       # We don't support internationalization here...
+       return False
+
+   def do_query_procedures(self):
+       return [ 'group-selected-layers' ]
+
+   def do_create_procedure(self, name):
+
+       if name == 'group-selected-layers':
+           procedure = Gimp.ImageProcedure.new(self, name,
+                                               Gimp.PDBProcType.PLUGIN,
+                                               self.group_selected_layers, None)
+           procedure.set_image_types("*")
+           procedure.set_sensitivity_mask(Gimp.ProcedureSensitivityMask.ALWAYS)
+           procedure.set_menu_label('group-selected-layers-label')
+           procedure.add_menu_path('<Image>/Filters/Development/Python-Fu/')
+           procedure.set_documentation('Run group-selected-layers',
+                                       'Run group-selected-layers',
+                                       name)
+
+       else:
+           return None
+
+       procedure.set_attribution(AUTHORS, COPYRIGHT, YEARS)
+       return procedure
+
+   def group_selected_layers(self, procedure, run_mode, image,
+                        n_drawables, config, run_data):
+
+       # => create new group
+       new_group = Gimp.GroupLayer.new(image, "my-new-group")
+
+       # => record currently selected layers
+       #
+       #    (is needed since inserting a new layer replaces the current selection with just the newly inserted layer)
+       #  
+       selected_layers = image.get_selected_layers()
+
+       # => insert new group into image
+       image.insert_layer(
+               new_group, # group to insert
+               None,      # parent nest group inside of. None = unnested
+               0          # index/stack-postition within parent (0 = insert as topmost layer within parent)
+       )
+
+       for selected_layer in selected_layers:
+           image.reorder_item(
+                   selected_layer,  # layer to reorder
+                   new_group,       # parent to nest inside
+                   -1               # index/stack-postition within parent (-1 = insert as bottommost layer within parent)
+           )
+
+       return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+
+
+Gimp.main(GroupSelectedLayers.__gtype__, sys.argv)
