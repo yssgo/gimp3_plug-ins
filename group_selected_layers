@@ -1,13 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-#  SAMPLE PLUG-IN USED AS REFERENCE/TEMPLATE: test-file-plug-ins.py 2021-2024 Jacob Boerema
+# Sample plug-in used as reference/template: 
+#   test-file-plug-ins.py 2021-2024 Jacob Boerema
 #
-# Tested and working on version 2.99.19 - commit fe6e1d7
+# Compatability:
+#   Tested and working on: 
+# 
+#     version: 2.99.19 - commit fe6e1d7
+#     Installation method: Flatpak
+#     Flatpak output (was mislabeled as): 
+#       GNU Image Manipulation Program  org.gimp.GIMP   3.0.0~rc1       master    gnome-nightly   system
+# 
+#     version: 3.0.0-RC1+git
+#     Installation method: Flatpak
+#     Flatpak output: 
+#       GNU Image Manipulation Program  org.gimp.GIMP   3.0.0~rc1       master    gnome-nightly   system
+#
 #
 # Script path:
-# ~/.config/GIMP/2.99/plug-ins/group_selected_layers/group_selected_layers.py
-
+#   ~/.config/GIMP/3.0/plug-ins/group_selected_layers/group_selected_layers.py
 
 import sys
 
@@ -17,7 +29,7 @@ from gi.repository import Gimp
 
 from gi.repository import GLib
 
-VERSION = "0.2"
+VERSION = "0.42"
 AUTHORS = "newinput"
 COPYRIGHT = "newinput"
 YEARS   = "2023-2024"
@@ -25,11 +37,21 @@ YEARS   = "2023-2024"
 class GroupSelectedLayers (Gimp.PlugIn):
 
    def __init__(self):
-       Gimp.PlugIn.__init__(self)
+       super().__init__()
        self.test_cfg = None
        self.log = None
 
-   ## GimpPlugIn virtual methods ##
+
+   # === GimpPlugIn virtual methods ===
+    
+   # I would remove this part but I get these messages in the console whenever it's commented out: 
+   # -------------------------------------
+   # [group-selected-layers] The catalog directory does not exist: /home/newinput/.var/app/org.gimp.GIMP/config/GIMP/3.0/plug-ins/group_selected_layers/locale
+   # [group-selected-layers] Override method set_i18n() for the plug-in to customize or disable localization.
+   # [group-selected-layers] Localization disabled
+   # -------------------------------------
+   # Not sure if it's better to let it complain and then disable it itself
+   # 
    def do_set_i18n(self, _name):
        # We don't support internationalization here...
        return False
@@ -44,13 +66,37 @@ class GroupSelectedLayers (Gimp.PlugIn):
                                                Gimp.PDBProcType.PLUGIN,
                                                self.group_selected_layers, None)
            procedure.set_image_types("*")
-           procedure.set_sensitivity_mask(Gimp.ProcedureSensitivityMask.ALWAYS)
-           procedure.set_menu_label('group-selected-layers-label')
-           procedure.add_menu_path('<Image>/Filters/Development/Python-Fu/')
-           procedure.set_documentation('Run group-selected-layers',
-                                       'Run group-selected-layers',
-                                       name)
 
+           # Allow user to also create group from one selected layer for more flexible workflow
+           # 
+           # eg. If you want to add a screen layer that only affects the single 
+           #     currently selected layer, it would be better if you could nest it first 
+           #     before doing that so it only applies to that single layer from the get-go.
+           # 
+           procedure.set_sensitivity_mask(Gimp.ProcedureSensitivityMask.DRAWABLES | Gimp.ProcedureSensitivityMask.DRAWABLE)
+
+           procedure.set_menu_label('Group Selected Layers')
+           procedure.add_menu_path('<Image>/Filters/Development/Python-Fu/')
+           procedure.add_menu_path('<Image>/Layer Stack/')
+
+           # I'm not sure why there is a single /Layer Menu section when you right click a layer right now
+           # though if I don't nest it in there it looks like this:
+           # 
+           #  -----------------------
+           # | Layer Menu >          |
+           # | Group Selected Layers |
+           # |                       |
+           # |                       |
+           #  -----------------------
+           #
+           procedure.add_menu_path('<Layers>/Layer Menu')
+
+           # Only part that is ChatGpt written since I take way to long wording things. 
+           # It's good I think. Much better than what I had before at least...
+           #
+           procedure.set_documentation("Group Selected Layers",
+                                       "Creates a new layer group and moves all selected layers into it, maintaining their stacking order.", 
+                                       name)
        else:
            return None
 
@@ -60,39 +106,62 @@ class GroupSelectedLayers (Gimp.PlugIn):
    def group_selected_layers(self, procedure, run_mode, image,
                         n_drawables, config, run_data):
 
+       # using undo_group so undo doesn't need to return each item one at a time and then remove the group...
+       image.undo_group_start()
+
        # => create new group
-       new_group = Gimp.GroupLayer.new(image, "my-new-group")
+       new_group = Gimp.GroupLayer.new(image, "Layer Group")
 
        # => record currently selected layers
        #
        #    (is needed since inserting a new layer replaces the current selection with just the newly inserted layer)
        #  
-       selected_layers = image.get_selected_layers()
-       parents = []
+       selected_layers = []
+       for drawable in n_drawables:
+           if drawable not in selected_layers and (Gimp.Item.is_layer(drawable) or Gimp.Item.is_group_layer(drawable)):
+               selected_layers.append(drawable)
 
+      # => if the selected drawable is a mask then
+      #    find and get all selected layers
+      # 
+      #    (
+      #      Need to do the search here since there's currently not any kind 
+      #      of layer_mask.get_layer() function that would allow us to simply 
+      #      use the passed in drawable to get the layer.
+      #    )
+      # 
+      # This block is especially ugly I know :{
+      # 
+      # Adding this in though so the user doesn't have to think about 
+      # whether edit_mask is toggled when trying to group the layer
+      #
+      # if found no selected Layer/GroupLayer types
+       if len(selected_layers) == 0:
+
+          # (masks don't work with multi-selection currently)
+          # Not sure if should account for the possibility of multi-selection working with masks? Probably won't be added? 
+          # 
+           if len(n_drawables) == 1 and Gimp.Item.is_layer_mask(n_drawables[0]):
+               # selected_layers = [layer for layer in image.get_selected_layers() if layer.get_mask() === n_drawables[0]] # ...not necessary?
+               selected_layers = image.get_selected_layers() # or singular 'layer' rather
+
+
+       # get all unique parent layers
+       parents = []
        for layer in selected_layers:
            parent = layer.get_parent()
            if parent not in parents:
                parents.append(parent)
 
-       # if same parents
-       #     if all selected layers are under the same parent layer, nest the new group layer inside of it
+       # if the layers are under same parent
        if len(parents) == 1:                
-           new_group_parent = parents[0]
+           new_group_parent = parents[0] # insert the new group layer inside that parent
            topmost_position = min([image.get_item_position(layer) for layer in selected_layers])
 
-       # if different parents
-       #     if selected layers are nested under different parent layers, insert group layer in the main stack, unnested
-       elif len(parents) > 1:              
-           new_group_parent = None
+       # if the layers not under same parent
+       elif len(parents) > 1:               
+           new_group_parent = None # insert group layer in the main stack, unnested
            topmost_position = 0
-
-       # if no parents found (should not happen)
-       #     use main stack as default here to try and not break anything. should not be able to reach this point ever though.
-       else:
-           new_group_parent = None
-           topmost_position = 0
-           print("ERROR: could not get any parents from selected layers")
 
 
        # => insert new group into image
@@ -109,7 +178,8 @@ class GroupSelectedLayers (Gimp.PlugIn):
                    -1               # index/stack-postition within parent (-1 = insert as bottommost layer within parent)
            )
 
-       return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+       image.undo_group_end()
 
+       return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
 
 Gimp.main(GroupSelectedLayers.__gtype__, sys.argv)
