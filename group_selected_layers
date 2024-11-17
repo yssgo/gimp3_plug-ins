@@ -29,7 +29,7 @@ from gi.repository import Gimp
 
 from gi.repository import GLib
 
-VERSION = "0.42"
+VERSION = "0.44"
 AUTHORS = "newinput"
 COPYRIGHT = "newinput"
 YEARS   = "2023-2024"
@@ -77,19 +77,19 @@ class GroupSelectedLayers (Gimp.PlugIn):
 
            procedure.set_menu_label('Group Selected Layers')
            procedure.add_menu_path('<Image>/Filters/Development/Python-Fu/')
-           procedure.add_menu_path('<Image>/Layer Stack/')
+           procedure.add_menu_path('<Image>/Layer/Stack/')
 
-           # I'm not sure why there is a single /Layer Menu section when you right click a layer right now
+           # I'm not sure why there is a single /Layers Menu section when you right click a layer right now
            # though if I don't nest it in there it looks like this:
            # 
            #  -----------------------
-           # | Layer Menu >          |
+           # | Layers Menu >         |
            # | Group Selected Layers |
            # |                       |
            # |                       |
            #  -----------------------
            #
-           procedure.add_menu_path('<Layers>/Layer Menu')
+           procedure.add_menu_path('<Layers>/Layers Menu')
 
            # Only part that is ChatGpt written since I take way to long wording things. 
            # It's good I think. Much better than what I had before at least...
@@ -108,9 +108,6 @@ class GroupSelectedLayers (Gimp.PlugIn):
 
        # using undo_group so undo doesn't need to return each item one at a time and then remove the group...
        image.undo_group_start()
-
-       # => create new group
-       new_group = Gimp.GroupLayer.new(image, "Layer Group")
 
        # => record currently selected layers
        #
@@ -146,40 +143,83 @@ class GroupSelectedLayers (Gimp.PlugIn):
                selected_layers = image.get_selected_layers() # or singular 'layer' rather
 
 
-       # get all unique parent layers
+       # => get all unique parent layers
        parents = []
+
+       layers_to_move = selected_layers
        for layer in selected_layers:
+
            parent = layer.get_parent()
-           if parent not in parents:
+
+           # if a layer's parent is also selected, keep the parent, omit the layer (child).
+           # 
+           if parent in selected_layers:
+               # remove child
+               layers_to_move = [s for s in layers_to_move if s is not layer]
+
+           # using elif here so we only add parent if it is NOT also selected
+           # removes the possibility of trying to nest a selected parent inside itself
+           # 
+           elif parent not in parents:
                parents.append(parent)
 
-       # if the layers are under same parent
-       if len(parents) == 1:                
-           new_group_parent = parents[0] # insert the new group layer inside that parent
-           topmost_position = min([image.get_item_position(layer) for layer in selected_layers])
+       # At this point, len(parents) will equal zero (0) 
+       # if n_drawables did not contain any of the following types: 
+       #   - layer
+       #   - layer_group
+       #   - layer_mask
+       # 
+       # This can happen with non-layer_mask channels like quickmask 
+       # or channels in the channels panel.
+       #
+       if len(parents) == 0:
+           Gimp.message("\n".join([
+                   "Error: Expected drawable types: ", 
+                   "    " + "\n    ".join([str(Gimp.Layer), str(Gimp.GroupLayer), str(Gimp.LayerMask)]), 
+                   "Instead got drawable types: ", 
+                   "    " + "\n    ".join([ str(drawable.type()) for drawable in n_drawables ]), 
+                   "-----------------------", 
+                   "Please make sure you have at least one Layer or Group Layer selected.", 
+                   "-----------------------", 
+                   "Hint: ", 
+                   "Will not work if Quick Mask is currently active, ", 
+                   "or another selection mask eg. one created via 'Save To Channel' is currently selected.", 
+                   "", 
+                   "You can check the status bar to confirm what you currently have selected"
+           ]))
+       else:
 
-       # if the layers not under same parent
-       elif len(parents) > 1:               
-           new_group_parent = None # insert group layer in the main stack, unnested
-           topmost_position = 0
+           # => create new group
+           new_group = Gimp.GroupLayer.new(image, "Layer Group")
+
+           # if the layers are under same parent
+           if len(parents) == 1:                
+               new_group_parent = parents[0] # insert the new group layer inside that parent
+               topmost_position = min([image.get_item_position(layer) for layer in layers_to_move])
+
+           # if the layers not under same parent
+           elif len(parents) > 1:               
+               new_group_parent = None # insert group layer in the main stack, unnested
+               topmost_position = 0
 
 
-       # => insert new group into image
-       image.insert_layer(
-               new_group,           # group to insert
-               new_group_parent,    # parent nest group inside of. None = unnested
-               topmost_position     # index/stack-postition within parent (0 = insert as topmost layer within parent)
-       )
-
-       for selected_layer in selected_layers:
-           image.reorder_item(
-                   selected_layer,  # layer to reorder
-                   new_group,       # parent to nest inside
-                   -1               # index/stack-postition within parent (-1 = insert as bottommost layer within parent)
+           # => insert new group into image
+           image.insert_layer(
+                   new_group,           # group to insert
+                   new_group_parent,    # parent nest group inside of. None = unnested
+                   topmost_position     # index/stack-postition within parent (0 = insert as topmost layer within parent)
            )
+
+           for layer in layers_to_move:
+               image.reorder_item(
+                       layer,           # layer to reorder
+                       new_group,       # parent to nest inside
+                       -1               # index/stack-postition within parent (-1 = insert as bottommost layer within parent)
+               )
 
        image.undo_group_end()
 
        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+
 
 Gimp.main(GroupSelectedLayers.__gtype__, sys.argv)
