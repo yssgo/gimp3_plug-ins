@@ -7,11 +7,6 @@
 # Compatability:
 #   Tested and working on: 
 # 
-#     version: 2.99.19 - commit fe6e1d7
-#     Installation method: Flatpak
-#     Flatpak output (was mislabeled as): 
-#       GNU Image Manipulation Program  org.gimp.GIMP   3.0.0~rc1       master    gnome-nightly   system
-# 
 #     version: 3.0.0-RC1+git
 #     Installation method: Flatpak
 #     Flatpak output: 
