@@ -1,0 +1,73 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-07-17 01:41+0900\n"
+"PO-Revision-Date: 2025-07-17 01:42+0900\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ko_KR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.6\n"
+
+#: group_selected_layers:99
+msgid "Group name:"
+msgstr "그룹 이름:"
+
+#: group_selected_layers:100
+msgid "The layer name of the new group layer."
+msgstr "새 그룹 레이어의 레이어 이름."
+
+#: group_selected_layers:101
+msgid "Layer Group"
+msgstr "레이어 그룹"
+
+#: group_selected_layers:105 group_selected_layers:125
+msgid "Group Selected Layers"
+msgstr "선택한 레이어 그룹화"
+
+#: group_selected_layers:127
+msgid ""
+"Creates a new layer group and moves all selected layers into it, maintaining "
+"their stacking order."
+msgstr ""
+"새 레이어 그룹을 만들고 선택한 모든 레이어를 이 그룹으로 이동합니다. 이 레이"
+"어들의 스태킹 순서는 유지됩니다."
+
+#: group_selected_layers:236
+msgid "Error: Expected drawable types:"
+msgstr "오류: 예상한 드로어블 유형들:"
+
+#: group_selected_layers:241
+msgid "Instead got drawable types:"
+msgstr "대신 받은 드로어블 유형들:"
+
+#: group_selected_layers:247
+msgid ""
+"-----------------------\n"
+"Please make sure you have at least one Layer or Group Layer selected.\n"
+"-----------------------\n"
+"Hint:\n"
+"Will not work if Quick Mask is currently active,\n"
+"or another selection mask eg. one created via 'Save To Channel' is currently "
+"selected.\n"
+"\n"
+"You can check the status bar to confirm what you currently have selected"
+msgstr ""
+"-----------------------\n"
+"레이어 또는 그룹 레이어가 하나 이상 선택되어 있는지 확인하세요.\n"
+"-----------------------\n"
+"힌트:\n"
+"퀵 마스크가 현재 활성화되었거나,\n"
+"'채널로 저장'을 통해 만든 다른 선택 마스크가 현재 선택되었으면 작동하지 않습"
+"니다.\n"
+"\n"
+"상태 표시줄을 보면 현재 선택한 항목을 확인할 수 있습니다"
