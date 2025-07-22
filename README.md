@@ -1,2 +1,2 @@
 # gimp3_plug-ins
-plugins for gimp 3 (unstable nightly versions) 
+Plugins for gimp 3.0.4 (Stable version)
