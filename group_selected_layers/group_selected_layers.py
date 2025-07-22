@@ -16,8 +16,7 @@
 # Script path:
 #   ~/.config/GIMP/3.0/plug-ins/group_selected_layers/group_selected_layers.py
 
-# Comment by yssgo
-# ================
+# == July 23, 2025 -- Sensu Iun ==
 # Compatability:
 #   Tested and working on:
 #     GIMP version: 3.0.4
@@ -65,15 +64,7 @@ class GroupSelectedLayers(Gimp.PlugIn):
 
     # === GimpPlugIn virtual methods ===
 
-    # I would remove this part but I get these messages in the console whenever it's commented out:
-    # -------------------------------------
-    # [group-selected-layers] The catalog directory does not exist: /home/newinput/.var/app/org.gimp.GIMP/config/GIMP/3.0/plug-ins/group_selected_layers/locale
-    # [group-selected-layers] Override method set_i18n() for the plug-in to customize or disable localization.
-    # [group-selected-layers] Localization disabled
-    # -------------------------------------
-    # Not sure if it's better to let it complain and then disable it itself
-    #
-    # Gimp 3.0.4 does not need this. -- yssgo
+    # == Gimp 3.0.4 no loger need this. -- Sensu Iun ==
     # def do_set_i18n(self, _name):
     #    # We don't support internationalization here...
     #    return False
